@@ -65,35 +65,105 @@ export async function installSection(session, themeId, section) {
   if (!isOS2) throw new OS2ValidationError(reason);
 
   const assetKey = `sections/${section.slug}.liquid`;
-  const url = `https://${session.shop}/admin/api/2025-01/themes/${themeId}/assets.json`;
+
+  // Use GraphQL for asset uploads
+  const url = `https://${session.shop}/admin/api/2025-01/graphql.json`;
+
+  const mutation = `
+    mutation themeFilesUpsert($themeId: ID!, $files: [OnlineStoreThemeFilesUpsertFileInput!]!) {
+      themeFilesUpsert(themeId: $themeId, files: $files) {
+        upsertedThemeFiles {
+          filename
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    themeId: `gid://shopify/OnlineStoreTheme/${themeId}`,
+    files: [
+      {
+        filename: assetKey,
+        body: { type: "TEXT", value: section.liquid }
+      }
+    ]
+  };
+
   const uploadResponse = await fetch(url, {
-    method: "PUT",
-    body: JSON.stringify({
-      asset: { key: assetKey, value: section.liquid },
-    }),
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Shopify-Access-Token": session.accessToken,
     },
+    body: JSON.stringify({ query: mutation, variables })
   });
 
   if (!uploadResponse.ok) {
     const text = await uploadResponse.text();
-    throw new Error(`Failed to upload section (${uploadResponse.status}): ${text}`);
+    throw new Error(`Failed to upload section HTTP (${uploadResponse.status}): ${text}`);
   }
+
+  const result = await uploadResponse.json();
+  const errors = result.data?.themeFilesUpsert?.userErrors || [];
+
+  if (errors.length > 0) {
+    throw new Error(`Failed to upload section: ${errors.map(e => e.message).join(", ")}`);
+  }
+
   return { assetKey };
 }
 
 export async function removeSection(session, themeId, sectionSlug) {
   const assetKey = `sections/${sectionSlug}.liquid`;
-  const url = `https://${session.shop}/admin/api/2025-01/themes/${themeId}/assets.json?asset[key]=${assetKey}`;
+
+  const url = `https://${session.shop}/admin/api/2025-01/graphql.json`;
+
+  const mutation = `
+    mutation themeFilesDelete($themeId: ID!, $files: [String!]!) {
+      themeFilesDelete(themeId: $themeId, files: $files) {
+        deletedThemeFiles {
+          filename
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    themeId: `gid://shopify/OnlineStoreTheme/${themeId}`,
+    files: [assetKey]
+  };
+
   const response = await fetch(url, {
-    method: "DELETE",
-    headers: { "X-Shopify-Access-Token": session.accessToken },
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Access-Token": session.accessToken,
+    },
+    body: JSON.stringify({ query: mutation, variables })
   });
-  if (!response.ok && response.status !== 404) {
+
+  if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Failed to remove section (${response.status}): ${text}`);
+    throw new Error(`Failed to remove section HTTP (${response.status}): ${text}`);
+  }
+
+  const result = await response.json();
+  const errors = result.data?.themeFilesDelete?.userErrors || [];
+
+  if (errors.length > 0) {
+    // 404s (file not found) in REST were ignored, but GraphQL might error. We log it but don't crash if it's already gone.
+    if (errors.some(e => e.message.toLowerCase().includes("not found"))) {
+      return;
+    }
+    throw new Error(`Failed to remove section: ${errors.map(e => e.message).join(", ")}`);
   }
 }
 
