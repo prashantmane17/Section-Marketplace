@@ -3,7 +3,16 @@
     "shopify-dev-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@shopify/dev-mcp@latest"]
+      "args": [
+        "-y",
+        "@shopify/dev-mcp@latest"
+      ]
+    },
+    "render": {
+      "url": "https://mcp.render.com/mcp",
+      "headers": {
+        "Authorization": "Bearer rnd_kZWsbS4ImI2vPjDZj67mskdTCs9o"
+      }
     }
   }
 }
