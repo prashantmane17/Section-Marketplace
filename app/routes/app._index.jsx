@@ -35,7 +35,7 @@ export const loader = async ({ request }) => {
   // Fetch all themes from Shopify
   let themes = [];
   try {
-    themes = await getThemes(admin);
+    themes = await getThemes(session);
   } catch (err) {
     console.error("[loader] getThemes error:", err.message);
     // Non-fatal: return empty themes, UI shows an error callout
@@ -52,9 +52,9 @@ export const loader = async ({ request }) => {
   // Fetch installed sections for this shop + theme from DB
   const installedRows = activeThemeId
     ? await db.installedSection.findMany({
-        where: { shop: session.shop, themeId: activeThemeId },
-        select: { sectionSlug: true, installedAt: true },
-      })
+      where: { shop: session.shop, themeId: activeThemeId },
+      select: { sectionSlug: true, installedAt: true },
+    })
     : [];
 
   const installedSlugs = new Set(installedRows.map((r) => r.sectionSlug));
@@ -78,9 +78,9 @@ export const action = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
 
   const formData = await request.formData();
-  const intent      = formData.get("intent");      // "install" | "remove"
+  const intent = formData.get("intent");      // "install" | "remove"
   const sectionSlug = formData.get("sectionSlug"); // e.g. "hero-banner"
-  const themeId     = formData.get("themeId");     // numeric string
+  const themeId = formData.get("themeId");     // numeric string
 
   // ── Input validation ────────────────────────────────────────────────────────
   if (!intent || !sectionSlug || !themeId) {
@@ -111,12 +111,15 @@ export const action = async ({ request }) => {
     }
 
     try {
-      const { assetKey } = await installSection(admin, themeId, section);
+      const { assetKey } = await installSection(session, themeId, section);
 
       // Persist record — get theme name from Shopify (best-effort)
       let themeName = "Unknown Theme";
       try {
-        const themeResp = await admin.rest.get({ path: `themes/${themeId}` });
+        const themeUrl = `https://${session.shop}/admin/api/2025-01/themes/${themeId}.json`;
+        const themeResp = await fetch(themeUrl, {
+          headers: { "X-Shopify-Access-Token": session.accessToken },
+        });
         if (themeResp.ok) {
           const body = await themeResp.json();
           themeName = body.theme?.name ?? themeName;
@@ -125,7 +128,7 @@ export const action = async ({ request }) => {
 
       await db.installedSection.create({
         data: {
-          shop:        session.shop,
+          shop: session.shop,
           themeId,
           themeName,
           sectionSlug,
@@ -150,7 +153,7 @@ export const action = async ({ request }) => {
   // ── REMOVE ──────────────────────────────────────────────────────────────────
   if (intent === "remove") {
     try {
-      await removeSection(admin, themeId, sectionSlug);
+      await removeSection(session, themeId, sectionSlug);
 
       await db.installedSection.deleteMany({
         where: { shop: session.shop, themeId, sectionSlug },
@@ -171,8 +174,8 @@ export const action = async ({ request }) => {
 
 // ─── Component (client-side UI) ───────────────────────────────────────────────
 const CATEGORY_COLORS = {
-  Marketing:    { bg: "#fff3cd", fg: "#856404" },
-  Content:      { bg: "#d1ecf1", fg: "#0c5460" },
+  Marketing: { bg: "#fff3cd", fg: "#856404" },
+  Content: { bg: "#d1ecf1", fg: "#0c5460" },
   "Social Proof": { bg: "#d4edda", fg: "#155724" },
 };
 
