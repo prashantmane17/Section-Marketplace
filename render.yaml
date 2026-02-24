@@ -1,0 +1,55 @@
+# render.yaml — Infrastructure-as-Code for Render
+# Docs: https://render.com/docs/infrastructure-as-code
+#
+# What this provisions:
+#  - 1 Web Service (Node.js):  builds + runs the app
+#  - 1 PostgreSQL Database:    managed by Render, connection string auto-injected
+#
+# Deploy steps:
+#  1. Push this repo to GitHub
+#  2. In Render Dashboard → New → Blueprint → connect your repo
+#  3. Render reads this file and creates both services automatically
+#  4. Add the remaining env vars in the Render dashboard (see below)
+
+services:
+  - type: web
+    name: section-marketplace
+    env: node
+    region: oregon         # Change to the region closest to your users
+    plan: starter          # Upgrade to Standard for zero-downtime deploys
+
+    # ── Build ────────────────────────────────────────────────────────────────
+    buildCommand: |
+      npm install && npm run build && npm run setup
+
+    # npm run build  → react-router build  (compiles frontend + server bundle)
+    # npm run setup  → prisma generate + prisma migrate deploy
+
+    # ── Start ────────────────────────────────────────────────────────────────
+    startCommand: node server.js
+
+    # ── Health check ─────────────────────────────────────────────────────────
+    healthCheckPath: /health
+
+    # ── Environment variables ─────────────────────────────────────────────────
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: DATABASE_URL
+        fromDatabase:
+          name: section-marketplace-db
+          property: connectionString
+
+      # ⚠ Add these manually in the Render dashboard (sensitive values):
+      #   SHOPIFY_API_KEY       — from Shopify Partners Dashboard
+      #   SHOPIFY_API_SECRET    — from Shopify Partners Dashboard
+      #   SHOPIFY_APP_URL       — https://<your-service-name>.onrender.com
+      #   SCOPES                — read_themes,write_themes
+      #   SESSION_SECRET        — random 64-char hex string
+
+databases:
+  - name: section-marketplace-db
+    plan: starter          # 256 MB RAM, 1 GB storage — upgrade for production
+    region: oregon         # Must match the web service region
+    postgresMajorVersion: "16"
