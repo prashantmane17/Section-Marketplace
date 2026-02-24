@@ -5,7 +5,7 @@ client_id = "b1a6a1ca760461de11623b20d4e35418"
 name      = "Free Section Marketplace"
 
 # Replace with your actual Render URL before deploying
-application_url = "https://your-app.onrender.com"
+application_url = "https://section-mkp.onrender.com"
 embedded        = true
 
 [build]
@@ -32,6 +32,6 @@ scopes = "read_themes,write_themes"
 # ─── Auth redirect URLs ───────────────────────────────────────────────────────
 [auth]
 redirect_urls = [
-  "https://your-app.onrender.com/auth/callback",
+  "https://section-mkp.onrender.com/auth/callback",
   "http://localhost:3000/auth/callback"
 ]
