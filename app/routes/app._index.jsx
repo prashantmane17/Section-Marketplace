@@ -111,7 +111,7 @@ export const action = async ({ request }) => {
     }
 
     try {
-      const { assetKey } = await installSection(session, themeId, section);
+      const { assetKey, result } = await installSection(session, themeId, section);
 
       // Persist record — get theme name from Shopify (best-effort)
       let themeName = "Unknown Theme";
@@ -140,6 +140,7 @@ export const action = async ({ request }) => {
       return {
         success: true,
         message: `"${section.name}" installed successfully! Add it to your page via Theme Customizer.`,
+        debugResult: result
       };
     } catch (err) {
       if (err instanceof OS2ValidationError) {
@@ -295,6 +296,16 @@ function SectionCard({ section, themeId, isPending }) {
         >
           Install
         </s-button>
+      )}
+
+      {/* Debug Info */}
+      {fetcher.data?.debugResult && (
+        <div style={{ marginTop: '10px', padding: '10px', background: '#f4f6f8', borderRadius: '6px', fontSize: '11px', overflowX: 'auto' }}>
+          <strong>API Response Debug:</strong>
+          <pre style={{ margin: 0, marginTop: '8px' }}>
+            {JSON.stringify(fetcher.data.debugResult, null, 2)}
+          </pre>
+        </div>
       )}
     </div>
   );

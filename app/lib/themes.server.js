@@ -104,17 +104,22 @@ export async function installSection(session, themeId, section) {
 
   if (!uploadResponse.ok) {
     const text = await uploadResponse.text();
+    console.error(`[installSection] HTTP Error ${uploadResponse.status}:`, text);
     throw new Error(`Failed to upload section HTTP (${uploadResponse.status}): ${text}`);
   }
 
   const result = await uploadResponse.json();
+  console.log(`[installSection] GraphQL Result for ${section.slug}:`, JSON.stringify(result, null, 2));
+
   const errors = result.data?.themeFilesUpsert?.userErrors || [];
 
   if (errors.length > 0) {
-    throw new Error(`Failed to upload section: ${errors.map(e => e.message).join(", ")}`);
+    const errorMsg = errors.map(e => e.message).join(", ");
+    console.error(`[installSection] UserErrors:`, errorMsg);
+    throw new Error(`Failed to upload section: ${errorMsg}`);
   }
 
-  return { assetKey };
+  return { assetKey, result };
 }
 
 export async function removeSection(session, themeId, sectionSlug) {
