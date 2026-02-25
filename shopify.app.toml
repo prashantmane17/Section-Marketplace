@@ -1,35 +1,28 @@
-# Free Section Marketplace — Shopify App Configuration
-# Docs: https://shopify.dev/docs/apps/tools/cli/configuration
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "b1a6a1ca760461de11623b20d4e35418"
-name      = "Free Section Marketplace"
-
-# Replace with your actual Render URL before deploying
+name = "Free Section Marketplace"
 application_url = "https://section-mkp.onrender.com"
-embedded        = true
+embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
 
-# ─── Webhooks ─────────────────────────────────────────────────────────────────
 [webhooks]
 api_version = "2025-01"
 
   [[webhooks.subscriptions]]
-  topics = ["app/uninstalled"]
-  uri    = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
 
   [[webhooks.subscriptions]]
-  topics = ["app/scopes_update"]
-  uri    = "/webhooks/app/scopes_update"
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
 
-# ─── OAuth Scopes ─────────────────────────────────────────────────────────────
-# read_themes: list themes, read assets (OS 2.0 validation)
-# write_themes: upload / delete section Liquid files
 [access_scopes]
-scopes = "read_themes,write_themes"
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_themes,write_themes,write_theme_code"
 
-# ─── Auth redirect URLs ───────────────────────────────────────────────────────
 [auth]
 redirect_urls = [
   "https://section-mkp.onrender.com/auth/callback",
